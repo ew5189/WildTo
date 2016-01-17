@@ -8,6 +8,7 @@
 #import "Define.h"
 #import "AFNetworking.h"
 #import "MJExtension.h"
+#import "MBProgressHUD+MJ.h"
 #import "RideCircleModel.h"
 #import "RideCircleFrame.h"
 #import "RideCircleCell.h"
@@ -37,6 +38,8 @@
     
     self.navigationItem.title =@"骑行圈";
     
+    [MBProgressHUD showMessage:@"正在为您加载.."];
+
     [self creatTableView];
     
     [self getData];
@@ -65,12 +68,12 @@
             
         }
         self.dataFrameArray =frameArray;
-        
-            
+         [MBProgressHUD hideHUD];
      
         [self.tableView reloadData];
     } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
         NSLog(@"请求错误");
+        [MBProgressHUD hideHUD];
     }];
     
     
@@ -79,9 +82,10 @@
 
 -(void)creatTableView
 {
-    _tableView =[[UITableView alloc]initWithFrame:CGRectMake(0, 20, ScreenW, ScreenH-64) style:UITableViewStylePlain];
+    _tableView =[[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenW, ScreenH-44) style:UITableViewStylePlain];
     _tableView.delegate =self;
     _tableView.dataSource =self;
+    
     [self.view addSubview:_tableView];
     
     

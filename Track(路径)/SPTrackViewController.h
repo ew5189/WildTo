@@ -8,6 +8,6 @@
 
 #import <UIKit/UIKit.h>
 
-@interface SPTrackViewController : UITabBarController
+@interface SPTrackViewController : UIViewController
 
 @end

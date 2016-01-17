@@ -81,8 +81,6 @@
     [self creatSearchBar];
     [self creatHomeScrollView];
     
-
-    
     //请求数据
     [self requestHistoryMatchTableViewData];
     

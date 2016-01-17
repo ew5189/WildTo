@@ -116,7 +116,7 @@
     _answerView.image =[UIImage imageNamed:@"ic_comment"];
     //新回复label
     _answerCount.frame =CGRectMake(CGRectGetMaxX(_answerView.frame)+2, _answerView.frame.origin.y, 5, 8);
-    _answerCount.text =[NSString stringWithFormat:@"%d",model.news_num];
+    _answerCount.text =[NSString stringWithFormat:@"%ld",model.news_num];
     
     //浏览量icon
     _visitCountView.frame =CGRectMake(CGRectGetMaxX(_answerCount.frame)+30, CGRectGetMaxY(_beginAndEndTime.frame)+2, 20, 15);

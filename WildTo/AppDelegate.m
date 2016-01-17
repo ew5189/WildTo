@@ -7,7 +7,10 @@
 #import "UIImageView+WebCache.h"
 #import "AFNetworking.h"
 #import "MBProgressHUD+MJ.h"
+#import "NewFeatureViewController.h"
 #import "SPTabBarController.h"
+#import "UMSocial.h"
+#import "UMSocialWechatHandler.h"
 #import "AppDelegate.h"
 
 @interface AppDelegate ()
@@ -22,9 +25,14 @@
     _window.backgroundColor =[UIColor whiteColor];
     [_window makeKeyAndVisible];
     
-    _window.rootViewController =[[SPTabBarController alloc]init];
+    _window.rootViewController =[[NewFeatureViewController alloc]init];
     
     
+    //设置友盟分享appkey
+    [UMSocialData setAppKey:@"569a2f9e67e58e2d22001770"];
+    
+    //设置微信AppId、appSecret，分享url
+    [UMSocialWechatHandler setWXAppId:@"wx1f7e1515e1a9992c" appSecret:@"15f58147e23367d027a66cf4664e9a51" url:@"http://www.wildto.com"];
     //监控网络
     AFNetworkReachabilityManager *manager =[AFNetworkReachabilityManager sharedManager];
     //当网络改变了，就会调用

@@ -19,6 +19,9 @@
 #define ScreenW [UIScreen mainScreen].bounds.size.width
 #define ScreenH [UIScreen mainScreen].bounds.size.height
 
+//地图
+#define KBundleKey  @"38ce1f988b5e6e2b0b40b4c65a54bb3d"
+
 //最新赛事广告接口
 #define KNewMatchAD_URL @"http://www.wildto.com/m/api/event?params=CNYl6Q2XrgGafgU9oTnacTYZC%3DEkIDRSXFYanu7JLN1nIxxiLt7B6xYXbWxWjbuOoYnhftIXogGW0dYStunanuYJCiIn0bYhtY1njr9BIQ6To2126TDNbgDB2Qe9otDnnbysIgYfITYyo212nVYZ6dTl6WEgnoXTCW2uBt6S6iIe6QCkCgbD6iaeCWmy6OCeBtrq"
 

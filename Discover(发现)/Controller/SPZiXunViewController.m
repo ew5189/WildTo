@@ -566,7 +566,7 @@
 
 -(void)creatYeJieTableView
 {
-    _yejieTableView =[[UITableView alloc]initWithFrame:CGRectMake(ScreenW*3, 0, ScreenW, ScreenH-104) style:UITableViewStylePlain];
+    _yejieTableView =[[UITableView alloc]initWithFrame:CGRectMake(ScreenW*3, 0, ScreenW, ScreenH-104-49) style:UITableViewStylePlain];
     _yejieTableView.delegate =self;
     _yejieTableView.dataSource =self;
     _yejieTableView.tag =1004;
@@ -677,7 +677,7 @@
 
 -(void)creatQiWenTableView
 {
-    _qiwenTableView =[[UITableView alloc]initWithFrame:CGRectMake(ScreenW*2, 0, ScreenW, ScreenH-104) style:UITableViewStylePlain];
+    _qiwenTableView =[[UITableView alloc]initWithFrame:CGRectMake(ScreenW*2, 0, ScreenW, ScreenH-104-49) style:UITableViewStylePlain];
     _qiwenTableView.delegate =self;
     _qiwenTableView.dataSource =self;
     _qiwenTableView.tag =1003;
@@ -780,7 +780,7 @@
 
 -(void)creatTieSanTableView
 {
-    _tiesanTableView =[[UITableView alloc]initWithFrame:CGRectMake(ScreenW, 0, ScreenW, ScreenH-104) style:UITableViewStylePlain];
+    _tiesanTableView =[[UITableView alloc]initWithFrame:CGRectMake(ScreenW, 0, ScreenW, ScreenH-104-49) style:UITableViewStylePlain];
     _tiesanTableView.delegate =self;
     _tiesanTableView.dataSource =self;
     _tiesanTableView.tag =1002;
@@ -1005,12 +1005,40 @@
 //点击了head按钮
 -(void)clickHeadBtn:(UIButton *)button
 {
-    NSLog(@"%@",button.currentTitle);
+    switch (button.tag) {
+        case 100:
+            [_bigScrollView setContentOffset:CGPointZero animated:YES];
+            break;
+        case 101:
+            [_bigScrollView setContentOffset:CGPointMake(ScreenW, 0) animated:YES];
+            break;
+        case 102:
+            [_bigScrollView setContentOffset:CGPointMake(ScreenW*2, 0) animated:YES];
+            break;
+        case 103:
+            [_bigScrollView setContentOffset:CGPointMake(ScreenW*3, 0) animated:YES];
+            break;
+        case 104:
+            [_bigScrollView setContentOffset:CGPointMake(ScreenW*4, 0) animated:YES];
+            break;
+        case 105:
+            [_bigScrollView setContentOffset:CGPointMake(ScreenW*5, 0) animated:YES];
+            break;
+
+        case 106:
+            [_bigScrollView setContentOffset:CGPointMake(ScreenW*6, 0) animated:YES];
+            break;
+
+            
+        default:
+            break;
+    }
+   
     
 }
 -(void)creatMatchTableView
 {
-    _matchTableView =[[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenW, ScreenH-104) style:UITableViewStylePlain];
+    _matchTableView =[[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenW, ScreenH-104-49) style:UITableViewStylePlain];
     _matchTableView.delegate =self;
     _matchTableView.dataSource =self;
     _matchTableView.tag =1001;

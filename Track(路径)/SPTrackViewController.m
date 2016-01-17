@@ -6,10 +6,14 @@
 //  Copyright (c) 2015年 LSP. All rights reserved.
 //
 #import "Define.h"
+
 #import "SPTrackViewController.h"
+#import <MAMapKit/MAMapKit.h>
+#import <AMapSearchKit/AMapSearchAPI.h>
+
+@interface SPTrackViewController ()<UIScrollViewDelegate,MAMapViewDelegate,AMapSearchDelegate>
 
 
-@interface SPTrackViewController ()<UIScrollViewDelegate>
 
 //nav下面短线
 @property(strong ,nonatomic) UIView *line;
@@ -41,6 +45,24 @@
 @property(strong ,nonatomic) UILabel *averageSpeed;
 //坡度
 @property(strong ,nonatomic) UILabel *poDu;
+
+//地图
+@property(strong ,nonatomic) MAMapView *mapView;
+
+//位置（经纬度，海拔）
+@property(strong ,nonatomic) CLLocation *location;
+//定位按钮
+@property(strong ,nonatomic) UIButton *locationButton;
+//API搜索对象
+@property(strong ,nonatomic) AMapSearchAPI *searchAPI;
+//兴趣点数组
+@property(strong ,nonatomic) NSArray *pois;
+//大头针数组
+@property(strong ,nonatomic) NSMutableArray *annotations;
+//目的地
+@property(strong ,nonatomic) MAPointAnnotation *distinationAnnotation;
+//路线数组
+@property(strong ,nonatomic) NSArray *pathPolylines;
 @end
 
 static int h =0;
@@ -53,9 +75,10 @@ static int s=0;
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.tabBar.hidden =YES;
+    self.tabBarController.tabBar.hidden =NO;
     self.navigationItem.title =@"轨迹记录";
     
+    self.view.backgroundColor =[UIColor whiteColor];
     self.navigationItem.leftBarButtonItem =[[UIBarButtonItem alloc]initWithTitle:@"返回" style:UIBarButtonItemStyleDone target:self action:@selector(clickBack)];
     self.navigationItem.leftBarButtonItem.tintColor =[UIColor blackColor];
     self.navigationItem.rightBarButtonItem =[[UIBarButtonItem alloc]initWithTitle:@"轨迹记录" style:UIBarButtonItemStyleDone target:self action:@selector(clickRightBtn)];
@@ -69,7 +92,408 @@ static int s=0;
     
     //  底部
     [self creatBottom];
+//---------------------------------------
+    [self creatMapView];
+    //定位按钮
+    [self creatTapLocationButton];
+    [self initSearchApi];
+    //搜索按钮
+//    [self creatSearchButton];
+    //线路规划按钮
+//    [self creatLinePathButton];
+    [self creatAnnotations];
+    [self creatLong];
+    [self creatMapBack];
+    [self creatBigAndSmall];
+
+    
+
 }
+//地图上的 加减
+-(void)creatBigAndSmall
+{
+    UIButton *button =[UIButton buttonWithType:UIButtonTypeCustom];
+    button.frame =CGRectMake(ScreenW*2 -60, _BigScrollView.frame.size.height*0.56, 50, 50);
+    [button setImage:[UIImage imageNamed:@"map_jia_unpress"] forState:UIControlStateNormal];
+    [button setImage: [UIImage imageNamed:@"map_jia_press"] forState:UIControlStateHighlighted];
+    [_BigScrollView addSubview:button];
+    
+    button =[UIButton buttonWithType:UIButtonTypeCustom];
+    button.frame =CGRectMake(ScreenW*2 -60, _BigScrollView.frame.size.height*0.65, 50, 50);
+    [button setImage:[UIImage imageNamed:@"map_jian_unpress"] forState:UIControlStateNormal];
+    [button setImage: [UIImage imageNamed:@"map_jian_press"] forState:UIControlStateHighlighted];
+    [_BigScrollView addSubview:button];
+    
+    
+}
+
+-(void)creatMapBack
+{
+    UIButton *backButton =[UIButton buttonWithType:UIButtonTypeCustom];
+    backButton.frame =CGRectMake(ScreenW, _BigScrollView.frame.size.height*0.5, 32, 107);
+    backButton.center =CGPointMake(ScreenW+16, _BigScrollView.frame.size.height*0.5);
+    [backButton setImage:[UIImage imageNamed:@"map_back_unpress"] forState:UIControlStateNormal];
+    [backButton setImage: [UIImage imageNamed:@"map_back_press"] forState:UIControlStateHighlighted];
+    [backButton addTarget:self action:@selector(clickLeftBack) forControlEvents:UIControlEventTouchUpInside];
+    [_BigScrollView addSubview:backButton];
+    
+}
+-(void)clickLeftBack
+{
+    [_BigScrollView setContentOffset:CGPointZero animated:YES];
+    _line.frame=CGRectMake(40, 108-3, 100, 3);
+}
+
+#pragma mark 5,初始化searchAPI
+-(void)initSearchApi
+{
+    _searchAPI =[[AMapSearchAPI alloc]initWithSearchKey:KBundleKey Delegate:self];
+}
+#pragma mark 6,获取当前位置
+-(void)mapView:(MAMapView *)mapView didUpdateUserLocation:(MAUserLocation *)userLocation updatingLocation:(BOOL)updatingLocation
+{
+    
+    _location =[userLocation.location copy];
+}
+#pragma mark 7,利用逆地理编码讲地图上的经纬度变成文字
+-(void)reGeoAction
+{
+    //初始化reque请求
+    AMapReGeocodeSearchRequest *request =[[AMapReGeocodeSearchRequest alloc]init];
+    //设置经纬度
+    [request setLocation:[AMapGeoPoint locationWithLatitude:_location.coordinate.latitude longitude:_location.coordinate.longitude]];
+    //设置请求
+    [_searchAPI AMapReGoecodeSearch:request];
+}
+
+#pragma mark 8.当search失败触发的方法
+-(void)searchRequest:(id)request didFailWithError:(NSError *)error
+{
+    NSLog(@"request is %@ and error is %@",request,error);
+}
+
+#pragma mark 9.search的逆地理解析回调
+-(void)onReGeocodeSearchDone:(AMapReGeocodeSearchRequest *)request response:(AMapReGeocodeSearchResponse *)response
+{
+    //首先取到城市信息
+    NSString *cityString =response.regeocode.addressComponent.city;
+    if (cityString ==nil) {//如果城市信息为 nil，不是城市就显示省份
+        cityString =response.regeocode.addressComponent.province;
+    }
+    //设置当前点的位置信息
+    [_mapView.userLocation setTitle:cityString];
+    //设置详细信息
+    [_mapView.userLocation setSubtitle:response.regeocode.formattedAddress];
+}
+
+#pragma mark 10.点击anotation 弹出的方法
+-(void)mapView:(MAMapView *)mapView didSelectAnnotationView:(MAAnnotationView *)view
+{
+    //看看是不是当前的位置annotation
+    if ([view.annotation isKindOfClass:[MAUserLocation class]]) {
+        //调用逆地理编码
+        [self reGeoAction];
+    }
+}
+
+#pragma mark 2.创建点击定位按钮
+-(void)creatTapLocationButton
+{
+    //创建按钮
+    _locationButton =[UIButton buttonWithType:UIButtonTypeCustom];
+    _locationButton.frame =CGRectMake(10, _mapView.frame.size.height-80, 50, 50);
+    //设置image
+    [_locationButton setImage:[UIImage imageNamed:@"map_location_unpress"] forState:UIControlStateNormal];
+    [_locationButton setImage:[UIImage imageNamed:@"map_location_press"] forState:UIControlStateHighlighted];
+
+    //添加监听事件
+    [_locationButton addTarget:self action:@selector(locationButtonClick:) forControlEvents:UIControlEventTouchUpInside];
+    
+    [_mapView addSubview:_locationButton];
+    
+}
+#pragma mark 3.按钮的监听事件
+-(void)locationButtonClick:(UIButton *)button
+{
+    //如果点击按钮不是当前的经纬度，我们就让它都定位到当前的经纬度
+    if(_mapView.userTrackingMode !=MAUserTrackingModeFollow)
+    {
+        //设置用户的跟随模式
+        [_mapView setUserTrackingMode:MAUserTrackingModeFollow animated:YES];
+    }
+    
+}
+#pragma mark 1.初始化地图
+-(void)creatMapView
+{
+    //设置map的key绑定高德服务器
+    [[MAMapServices sharedServices]setApiKey:KBundleKey];
+    //创建map
+    _mapView =[[MAMapView alloc]initWithFrame:CGRectMake(ScreenW, 0, ScreenW, ScreenH-108)];
+    _mapView.delegate=self;
+    //设置罗盘位置
+//    [_mapView setCompassOrigin:CGPointMake(_mapView.compassOrigin.x, 44)];
+    //设置指南针
+//    [_mapView setScaleOrigin:CGPointMake(_mapView.scaleOrigin.x, 100)];
+    
+    [_BigScrollView addSubview:_mapView];
+    
+    //打开用户定位功能（一定要打开）
+    [_mapView setShowsUserLocation:YES];
+    
+}
+
+#pragma mark 4.用户的跟随模式改变 调用的代理方法
+-(void)mapView:(MAMapView *)mapView didChangeUserTrackingMode:(MAUserTrackingMode)mode animated:(BOOL)animated
+{
+    if(mode ==MAUserTrackingModeNone)
+    {
+//        [_locationButton setImage:[UIImage imageNamed:@"pointer1"] forState:UIControlStateNormal];
+    }else{
+//        [_locationButton setImage:[UIImage imageNamed:@"pointer2"] forState:UIControlStateNormal];
+    }
+    
+}
+#pragma mark 11.初始化一个search按钮
+-(void)creatSearchButton
+{
+    UIButton *searchButton =[UIButton buttonWithType:UIButtonTypeCustom];
+    searchButton.frame =CGRectMake(54, _mapView.frame.size.height -65, 44, 44);
+    searchButton.layer.cornerRadius =5.0;
+    [searchButton setImage:[UIImage imageNamed:@"BigSearch"] forState:UIControlStateNormal];
+    [searchButton addTarget:self action:@selector(searchButtonClick:) forControlEvents:UIControlEventTouchUpInside];
+    [_mapView addSubview:searchButton];
+    
+}
+#pragma mark 12,搜索按钮点击事件
+-(void)searchButtonClick:(UIButton *)button
+{
+    //如果searchApi为空 或没有位置
+    if (_searchAPI ==nil ||_location ==nil)
+    {
+        return;
+    }
+    //初始化placeSearch
+    AMapPlaceSearchRequest *request =[[AMapPlaceSearchRequest alloc]init];
+    //设置search类型
+    [request setSearchType:AMapSearchType_PlaceAround];
+    //设置当前的经纬度
+    [request setLocation:[AMapGeoPoint locationWithLatitude:_location.coordinate.latitude longitude:_location.coordinate.longitude]];
+    //设置关键字
+    [request setKeywords:@"ktv"];
+    //地理请求
+    [_searchAPI AMapPlaceSearch:request];
+    
+}
+#pragma  mark 13.兴趣点的点击回调
+-(void)onPlaceSearchDone:(AMapPlaceSearchRequest *)request response:(AMapPlaceSearchResponse *)response
+{
+    if (response.pois.count >0)
+    {
+        _pois =response.pois;
+
+    }
+    //清UI
+    [_mapView removeAnnotations:_annotations];
+    //清空数据
+    [_annotations removeAllObjects];
+}
+
+#pragma mark 初始化大头针数组
+-(void)creatAnnotations
+{
+    _annotations =[NSMutableArray array];
+}
+
+#pragma mark 18.annotation 自定义
+-(MAAnnotationView *)mapView:(MAMapView *)mapView viewForAnnotation:(id<MAAnnotation>)annotation
+{
+    //如果annotation为distination我们就有系统的annation
+    if(annotation ==_distinationAnnotation)
+    {
+        static NSString *destinationIdentifier =@"destinationAnnotationIdentifier";
+        MAPinAnnotationView *annotationView =(MAPinAnnotationView*)[_mapView dequeueReusableAnnotationViewWithIdentifier:destinationIdentifier];
+        if(annotationView ==nil)
+        {
+            annotationView =[[MAPinAnnotationView alloc]initWithAnnotation:annotation reuseIdentifier:destinationIdentifier];
+            
+        }
+        //设置可以弹出气泡
+        [annotationView setCanShowCallout:YES];
+        [annotationView setPinColor:MAPinAnnotationColorRed];
+        //设置下落动画
+        annotationView.animatesDrop =YES;
+        
+        return annotationView;
+    }
+    //为了区别不同的大头针
+    if([annotation isKindOfClass:[MAPointAnnotation class]])
+    {
+        //tableView列表生成的大头针
+        static NSString *identifier =@"annotationIdentifier";
+        MAPinAnnotationView *pointAnnotation =(MAPinAnnotationView*)[_mapView dequeueReusableAnnotationViewWithIdentifier:identifier];
+        if(pointAnnotation ==nil)
+        {
+            pointAnnotation =[[MAPinAnnotationView alloc]initWithAnnotation:annotation reuseIdentifier:identifier];
+            
+        }
+        pointAnnotation.pinColor =MAPinAnnotationColorGreen;
+        return pointAnnotation;
+    }
+    return nil;
+}
+#pragma mark 19.初始化长按
+-(void)creatLong{
+    UILongPressGestureRecognizer *longGesture =[[UILongPressGestureRecognizer alloc]initWithTarget:self action:@selector(addLongGesture:)];
+    [_mapView addGestureRecognizer:longGesture];
+}
+#pragma mark 20.长按手势的监听
+-(void)addLongGesture:(UILongPressGestureRecognizer*)gesture
+{
+    if(gesture.state ==UIGestureRecognizerStateBegan)
+    {
+        //通过mapView拿到当前的位置
+        CLLocationCoordinate2D location =[_mapView convertPoint:[gesture locationInView:_mapView] toCoordinateFromView:_mapView];
+        if (_distinationAnnotation !=nil) {
+            //清UI
+            [_mapView removeAnnotation:_distinationAnnotation];
+            //清数据
+            _distinationAnnotation =nil;
+        }
+        _distinationAnnotation =[[MAPointAnnotation alloc]init];
+        _distinationAnnotation.coordinate =location;
+        _distinationAnnotation.title =@"destionation";
+        [_mapView addAnnotation:_distinationAnnotation];
+    }
+}
+#pragma mark 21.创建一个线路规划的按钮
+-(void)creatLinePathButton
+{
+    UIButton *pathButton =[UIButton buttonWithType:UIButtonTypeCustom];
+    pathButton.frame =CGRectMake(100, _mapView.frame.size.height -65, 44, 44);
+    pathButton.layer.cornerRadius =5.0;
+    [pathButton setImage:[UIImage imageNamed:@"path"] forState:UIControlStateNormal];
+    [pathButton addTarget:self  action:@selector(pathButton:) forControlEvents:UIControlEventTouchUpInside];
+    [_mapView addSubview:pathButton];
+    
+}
+#pragma mark 22.pathButton规划线路按钮的点击事件
+-(void)pathButton:(UIButton *)button
+{
+    if (_searchAPI ==nil || _location ==nil || _distinationAnnotation ==nil)
+    {
+        NSLog(@"path search failed because currentLocation or destination or searchApi is nil");
+        return;
+    }
+    //初始化路线搜索请求
+    AMapNavigationSearchRequest *request =[[AMapNavigationSearchRequest alloc]init];
+    //设置为步行路径规划
+    [request setSearchType:AMapSearchType_NaviWalking];
+    //设置初始点的经纬度
+    [request setOrigin:[AMapGeoPoint locationWithLatitude:_location.coordinate.latitude longitude:_location.coordinate.longitude]];
+    //设置目的地点的经纬度
+    [request setDestination:[AMapGeoPoint locationWithLatitude:_distinationAnnotation.coordinate.latitude longitude:_distinationAnnotation.coordinate.longitude]];
+    //发起搜索请求
+    [_searchAPI AMapNavigationSearch:request];
+    
+}
+#pragma mark 23以下内容都是绘制线条的内容
+-(void)onNavigationSearchDone:(AMapNavigationSearchRequest *)request response:(AMapNavigationSearchResponse *)response
+{
+    if (response.count > 0)
+    {
+        [_mapView removeOverlays:_pathPolylines];
+        _pathPolylines =nil;
+    }
+    _pathPolylines =[self polylinesForPath:response.route.paths[0]];
+    [_mapView addOverlays:_pathPolylines];
+    [_mapView showAnnotations:@[_distinationAnnotation,_mapView.userLocation] animated:YES];
+    
+}
+
+#pragma mark 27.绘制路线
+- (CLLocationCoordinate2D *)coordinatesForString:(NSString *)string coordinateCount:(NSUInteger *)coordinateCount parseToken:(NSString *)token{
+    if (string == nil)
+    {
+        return NULL;
+    }
+    
+    if (token == nil)
+    {
+        token = @",";
+    }
+    
+    NSString *str = @"";
+    if (![token isEqualToString:@","])
+    {
+        str = [string stringByReplacingOccurrencesOfString:token withString:@","];
+    }
+    
+    else
+    {
+        str = [NSString stringWithString:string];
+    }
+    
+    NSArray *components = [str componentsSeparatedByString:@","];
+    NSUInteger count = [components count] / 2;
+    if (coordinateCount != NULL)
+    {
+        *coordinateCount = count;
+    }
+    CLLocationCoordinate2D *coordinates = (CLLocationCoordinate2D*)malloc(count * sizeof(CLLocationCoordinate2D));
+    
+    for (int i = 0; i < count; i++)
+    {
+        coordinates[i].longitude = [[components objectAtIndex:2 * i]     doubleValue];
+        coordinates[i].latitude  = [[components objectAtIndex:2 * i + 1] doubleValue];
+    }
+    
+    return coordinates;
+}
+-(NSArray *)polylinesForPath:(AMapPath *)path
+{
+    if(path ==nil || path.steps.count ==0)
+    {
+        return nil;
+    }
+    NSMutableArray *polylines =[NSMutableArray array];
+    [path.steps enumerateObjectsUsingBlock:^(AMapStep *step, NSUInteger idx, BOOL *stop) {
+        NSInteger count =0;
+        CLLocationCoordinate2D *coordinates = [self coordinatesForString:step.polyline coordinateCount:&count parseToken:@";"];
+        
+        MAPolyline *polyline = [MAPolyline polylineWithCoordinates:coordinates count:count];
+        [polylines addObject:polyline];
+        
+        free(coordinates), coordinates = NULL;
+    }];
+    
+    return polylines;
+    
+}
+-(MAOverlayPathView *)mapView:(MAMapView *)mapView viewForOverlay:(id<MAOverlay>)overlay
+{
+    if([overlay isKindOfClass:[MAPolyline class]])
+    {
+        MAPolylineView *polylineView =[[MAPolylineView alloc]initWithPolyline:overlay];
+        polylineView.lineWidth =4;
+        polylineView.strokeColor =[UIColor blueColor];
+        return polylineView;
+    }
+    return nil;
+}
+
+
+
+
+
+//ic_locate
+//map_back_press
+//map_model_nor
+//map_location_unpress
+
+
+
+
 
 -(void)clickRightBtn
 {
@@ -333,6 +757,7 @@ static int s=0;
     _BigScrollView.bounces =NO;
     _BigScrollView.pagingEnabled =YES;
     _BigScrollView.delegate =self;
+    _BigScrollView.userInteractionEnabled =YES;
     [self.view addSubview:_BigScrollView];
     
     for (int i =0; i<2; i++) {
@@ -352,11 +777,11 @@ static int s=0;
 {
     if (button.tag ==101) {
         
-         _BigScrollView.contentOffset =CGPointMake(ScreenW, 0);
+        [_BigScrollView setContentOffset:CGPointMake(ScreenW, 0) animated:YES];
         _line.frame =CGRectMake(button.frame.origin.x, CGRectGetMaxY(button.frame)-3, button.frame.size.width, 3);
     }else
     {
-        _BigScrollView.contentOffset =CGPointMake(0, 0);
+        [_BigScrollView setContentOffset:CGPointZero animated:YES];
         _line.frame =CGRectMake(button.frame.origin.x, CGRectGetMaxY(button.frame)-3, button.frame.size.width, 3);
 
     }
@@ -378,6 +803,11 @@ static int s=0;
     }else{
         _line.frame =CGRectMake(40, 108-3, 100, 3);
     }
+    
+}
+
+-(void)dealloc
+{
     
 }
 

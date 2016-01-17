@@ -99,10 +99,6 @@
 
 -(void)creatNavLeftButton
 {
-//    _bgImage =[[UIImageView alloc]initWithFrame:CGRectMake(8, 32, 23, 23)];
-//    _bgImage.image =[UIImage imageNamed:@"big_background.9"];
-//    _bgImage.alpha =0.5;
-//    [self.view addSubview:_bgImage];
     
     _navLeftButton =[UIButton buttonWithType:UIButtonTypeCustom];
     _navLeftButton.frame =CGRectMake(10, 13, 15, 20);

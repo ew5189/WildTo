@@ -48,13 +48,16 @@
         
         _titleLabel =[[UILabel alloc]init];
         _titleLabel.font =[UIFont systemFontOfSize:14];
+        _titleLabel.numberOfLines =0;
         [self.contentView addSubview:_titleLabel];
         
         _picView =[[UIImageView alloc]init];
         [self.contentView addSubview:_picView];
         
         _eventName =[[UILabel alloc]init];
+        _eventName.numberOfLines =0;
         _eventName.font =[UIFont systemFontOfSize:12];
+        _eventName.textColor =[UIColor blueColor];
         [self.contentView addSubview:_eventName];
         
     }
@@ -70,13 +73,17 @@
     
     RideCircleModel *model =self.circleFrame.model;
     [_iconView sd_setImageWithURL:[NSURL URLWithString:model.icon_url]];
-   
     _iconView.frame =_circleFrame.iconF;
+    _iconView.layer.cornerRadius =30;
+    _iconView.layer.masksToBounds =YES;
     
     _nameLabel.text =model.nickname;
     _nameLabel.frame =self.circleFrame.nickNameF;
     
-    _creatTime.text =[NSString stringWithFormat:@"%ld",model.create_time];
+    NSDateFormatter *dataFormat =[[NSDateFormatter alloc]init];
+    dataFormat.dateFormat =@"yyyy-MM-dd HH:mm:ss";
+    NSString *currentStr = [dataFormat stringFromDate:[NSDate dateWithTimeIntervalSince1970:model.create_time]];
+    _creatTime.text = currentStr;
     _creatTime.frame =self.circleFrame.create_timeF;
     
     _titleLabel.text =model.content;
@@ -94,7 +101,7 @@
             _picView.frame =self.circleFrame.img_thumbF;
             _picView.hidden =NO;
             
-            _eventName.text =model.event_name;
+        _eventName.text =[NSString stringWithFormat:@"来自：%@",model.event_name];
             _eventName.frame =self.circleFrame.event_nameF;
             _eventName.hidden =NO;
         
@@ -116,7 +123,7 @@
     {
         _picView.hidden =YES;
         
-        _eventName.text =model.event_name;
+        _eventName.text =[NSString stringWithFormat:@"来自：%@",model.event_name];
         _eventName.frame =self.circleFrame.event_nameF;
         _eventName.hidden =NO;
 
